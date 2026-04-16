@@ -79,7 +79,7 @@ def test(model, device, test_loader, dataset, FLAGS):
             rm2 = get_rm2(G, P)   
             auc_values = []
             for t in thresholds:
-                auc = get_aupr(np.int32(G > t), P)
+                auc = get_aupr(P, G, t)
                 auc_values.append(auc) 
             loss = lm_loss + kl_loss
             total_loss += loss.item() * data.num_graphs
@@ -134,7 +134,7 @@ def experiment(FLAGS, dataset, device):
             if (epoch + 1) % 20 == 0:
                 # Test model
                 total_loss, mse_loss, test_ci, rm2, auc_values, G, P = test(model, device, test_loader, dataset, FLAGS)
-                filename = f"saved_models/deepdtagen_model_{dataset}.pth"
+                filename = f"models/deepdtagen_model_{dataset}.pth"
                 if mse_loss < best_mse:
                     best_mse = mse_loss
                     torch.save(model.state_dict(), filename)
@@ -167,6 +167,6 @@ if __name__ == "__main__":
 
     os.makedirs(FLAGS.log_dir, exist_ok=True)
     os.makedirs('Affinities', exist_ok=True)
-    os.makedirs('saved_models', exist_ok=True)
+    os.makedirs('models', exist_ok=True)
 
     experiment(FLAGS, dataset, device)

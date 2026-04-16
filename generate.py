@@ -45,7 +45,7 @@ if __name__ == '__main__':
         'tokenizer_path': f'data/{dataset}_tokenizer.pkl',
         'n_mol': 40000,
         'filter': True,
-        'batch_size': 1,
+        'batch_size': 128,
         'seed': -1
     }
 
@@ -55,23 +55,25 @@ if __name__ == '__main__':
 
     # Load dataset and model
     test_data = TestbedDataset(root="data", dataset=f"{dataset}_test")
-    test_loader = DataLoader(test_data, batch_size=1, shuffle=False)
+    test_loader = DataLoader(test_data, batch_size=config['batch_size'], shuffle=False)
     model, tokenizer = load_model(config['model_path'], config['tokenizer_path'])
 
     model.eval()
     model.to(device)
 
     # Generate SMILES
-    for i, data in enumerate(tqdm(test_loader)):
-        data.to(device)
-        generated = tokenizer.get_text(model.generate(data))
-        generated = generated[:config['n_mol']]
+    with torch.no_grad():
+        for batch_idx, data in enumerate(tqdm(test_loader)):
+            data = data.to(device)
+            generated_batch = tokenizer.get_text(model.generate(data))
+            start = batch_idx * config['batch_size']
+            end = min(start + len(generated_batch), len(input_df))
 
-        if config['filter']:
-            generated = [format_smiles(smi) for smi in generated]
-            generated = [smi for smi in generated if smi]
+            if config['filter']:
+                generated_batch = [format_smiles(smi) for smi in generated_batch]
 
-        input_df.loc[i, 'Generated_SMILES'] = generated[0] if generated else None
+            for row_idx, generated in zip(range(start, end), generated_batch[:config['n_mol']]):
+                input_df.loc[row_idx, 'Generated_SMILES'] = generated if generated else None
 
     output_path = Path(f"{dataset}_generated.csv")
     input_df.to_csv(output_path, index=False)

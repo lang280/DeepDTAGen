@@ -4,7 +4,7 @@ from math import sqrt
 from scipy import stats
 from torch_geometric.data import InMemoryDataset
 from torch_geometric.loader import DataLoader
-from sklearn.metrics import auc,precision_recall_curve
+from sklearn.metrics import auc, precision_recall_curve, average_precision_score
 from torch_geometric import data as DATA
 import torch
 from torch.nn.utils.rnn import pad_sequence
@@ -135,7 +135,8 @@ class TestbedDataset(InMemoryDataset):
         data_list = []
         data_len = len(xd)
         for i in range(data_len):
-            print('Preparing data in Pytorch Format: {}/{}'.format(i + 1, data_len))
+            if i == 0 or (i + 1) % 500 == 0 or i + 1 == data_len:
+                print('Preparing data in Pytorch Format: {}/{}'.format(i + 1, data_len))
             smiles = xd[i]
             target = xt[i]
             labels = y[i]

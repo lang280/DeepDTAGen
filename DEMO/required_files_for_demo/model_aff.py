@@ -15,14 +15,18 @@ class PositionalEncoding(nn.Module):
     def __init__(self, d_model, dropout=0.1, max_len=5000):
         super().__init__()
         self.dropout = nn.Dropout(p=dropout)
+        self.d_model = d_model
 
-        pe = torch.zeros(max_len, d_model)
-        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+        pe = self._build_pe(max_len, torch.device('cpu'))
+        self.register_buffer('pe', pe)
+
+    def _build_pe(self, max_len, device):
+        pe = torch.zeros(max_len, self.d_model, device=device)
+        position = torch.arange(0, max_len, dtype=torch.float, device=device).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, self.d_model, 2, device=device).float() * (-math.log(10000.0) / self.d_model))
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
-        pe = pe.unsqueeze(0).transpose(0, 1)
-        self.register_buffer('pe', pe)
+        return pe.unsqueeze(0).transpose(0, 1)
 
     def forward(self, x):
         r"""Inputs of forward function
@@ -34,8 +38,12 @@ class PositionalEncoding(nn.Module):
         Examples:
             >>> output = pos_encoder(x)
         """
-
-        x = x + self.pe[:x.size(0), :]
+        pe = self.pe
+        if x.size(0) > pe.size(0):
+            pe = self._build_pe(x.size(0), x.device)
+        else:
+            pe = pe[:x.size(0), :].to(x.device)
+        x = x + pe
         return self.dropout(x)
 
 class Namespace:
@@ -131,7 +139,7 @@ class Encoder(torch.nn.Module):
         return padded_sequence_with_encoding, padding_mask
 
     def forward(self, data, con):
-       x, edge_index, batch, num_nodes, affinity = data.x, data.edge_index, data.batch, data.c_size, data.y
+       x, edge_index, batch, num_nodes = data.x, data.edge_index, data.batch, data.c_size
        GCNConv = self.GraphConv1(x, edge_index)
        GCNConv = self.Relu_activation(GCNConv)
        GCNConv = self.GraphConv2(GCNConv, edge_index)

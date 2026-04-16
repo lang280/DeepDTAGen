@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+.venv/
+
+# Data files
+data/processed/
+data/*.csv
+data/*.pkl
+
+# Model weights
+models/
+models.rar
+
+# Generated output
+bindingdb_generated.csv
+*_generated.csv
+
+# IDE / tools
+.codex

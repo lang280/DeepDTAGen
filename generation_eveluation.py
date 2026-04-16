@@ -45,9 +45,9 @@ def main():
 
     results = evaluate_smiles(generated, reference_set)
 
-    print(f"Validity Ratio   : {results['validity_ratio']:.2f}")
-    print(f"Uniqueness Ratio : {results['uniqueness_ratio']:.2f}")
-    print(f"Novelty Ratio    : {results['novelty_ratio']:.2f}")
+    print(f"Validity   : {results['validity_ratio']:.2f}")
+    print(f"Uniqueness : {results['uniqueness_ratio']:.2f}")
+    print(f"Novelty    : {results['novelty_ratio']:.2f}")
 
 
 if __name__ == "__main__":
