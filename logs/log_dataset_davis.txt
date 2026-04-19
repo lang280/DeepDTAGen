@@ -1,0 +1,8 @@
+Starting program
+Dataset davis, Device cpu, batch size 32, learning rate 0.0002, epochs 500
+Starting program
+Dataset davis, Device cpu, batch size 32, learning rate 0.0002, epochs 500
+Starting program
+Dataset davis, Device cpu, batch size 32, learning rate 0.0002, epochs 500
+Starting program
+Dataset davis, Device cpu, batch size 32, learning rate 0.0002, epochs 500

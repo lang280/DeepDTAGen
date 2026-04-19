@@ -1,0 +1,2 @@
+Starting program
+Dataset davis, Device cpu, batch size 256, learning rate 0.0002, epochs 1

@@ -135,8 +135,7 @@ class TestbedDataset(InMemoryDataset):
         data_list = []
         data_len = len(xd)
         for i in range(data_len):
-            if i == 0 or (i + 1) % 500 == 0 or i + 1 == data_len:
-                print('Preparing data in Pytorch Format: {}/{}'.format(i + 1, data_len))
+            print('Preparing data in Pytorch Format: {}/{}'.format(i + 1, data_len))
             smiles = xd[i]
             target = xt[i]
             labels = y[i]

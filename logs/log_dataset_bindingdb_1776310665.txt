@@ -1,0 +1,2 @@
+Starting program
+Dataset bindingdb, Device cpu, batch size 32, learning rate 0.0002, epochs 1

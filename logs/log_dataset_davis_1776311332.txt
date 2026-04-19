@@ -1,0 +1,4 @@
+Starting program
+Dataset davis, Device cpu, batch size 256, learning rate 0.0002, epochs 1
+Epoch 1, total loss=141858.09375, MSE=30.490291595458984, KL_loss=141825040.0, LM=2.5699245929718018
+Program finished

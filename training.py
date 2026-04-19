@@ -44,7 +44,7 @@ def train(model, device, train_loader, optimizer, mse_f, epoch, train_data, FLAG
             # loss.backward()
             # optimizer.step()
 
-            losses = [loss, mse_loss] 
+            losses = [loss, mse_loss]
             optimizer.ft_backward(losses)
             optimizer.step()
             t.set_postfix(MSE=mse_loss.item(), Train_cindex=train_ci, KL=kl_loss.item(), LM=lm_loss.item())
@@ -53,37 +53,38 @@ def train(model, device, train_loader, optimizer, mse_f, epoch, train_data, FLAG
     return model
 
 def test(model, device, test_loader, dataset, FLAGS):
-    """Test the DeepDTAGen model on the specified data and report the results.""" 
+    """Test the DeepDTAGen model on the specified data and report the results."""
     print('Testing on {} samples...'.format(len(test_loader.dataset)))
     model.eval()
     total_true = torch.Tensor()
     total_predict = torch.Tensor()
-    total_loss = 0 
+    total_loss = 0
 
     if dataset == "kiba":
         thresholds = [10.0, 10.50, 11.0, 11.50, 12.0, 12.50]
     else:
-        thresholds = [5.0, 5.50, 6.0, 6.50, 7.0, 7.50, 8.0, 8.50]  
+        thresholds = [5.0, 5.50, 6.0, 6.50, 7.0, 7.50, 8.0, 8.50]
 
     with torch.no_grad():
         for i, data in enumerate(tqdm(test_loader)):
-            
+
             Pridection, new_drug, lm_loss, kl_loss = model(data.to(device))
 
             total_true = torch.cat((total_true, data.y.view(-1, 1).cpu()), 0)
-            total_predict = torch.cat((total_predict, Pridection.cpu()), 0)   
+            total_predict = torch.cat((total_predict, Pridection.cpu()), 0)
             G = total_true.numpy().flatten()
             P = total_predict.numpy().flatten()
             mse_loss = mse(G, P)
-            test_ci = get_cindex(G, P)      
-            rm2 = get_rm2(G, P)   
+            test_ci = get_cindex(G, P)
+            rm2 = get_rm2(G, P)
             auc_values = []
             for t in thresholds:
                 auc = get_aupr(P, G, t)
-                auc_values.append(auc) 
+                auc_values.append(auc)
             loss = lm_loss + kl_loss
+            # total_loss += loss.item() * data.num_graphs
             total_loss += loss.item() * data.num_graphs
-    return total_loss, mse_loss, test_ci, rm2, auc_values, G, P
+    return total_loss, lm_loss, kl_loss, mse_loss, test_ci, rm2, auc_values, G, P
 
 def experiment(FLAGS, dataset, device):
     logging('Starting program', FLAGS)
@@ -120,29 +121,31 @@ def experiment(FLAGS, dataset, device):
         # Prepare PyTorch mini-batches
         train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
         test_loader = DataLoader(test_data, batch_size=BATCH_SIZE, shuffle=False)
-        
+
         # Initialize model, optimizer, and loss function
         model = DeepDTAGen(tokenizer).to(device)
         optimizer = FetterGrad(optim.Adam(model.parameters(), lr=LR))
         mse_f = nn.MSELoss()
 
         # Train model
-        best_mse = float('inf')  
+        best_mse = float('inf')
         for epoch in range(NUM_EPOCHS):
             model = train(model, device, train_loader, optimizer, mse_f, epoch, train_data, FLAGS)
 
             if (epoch + 1) % 20 == 0:
                 # Test model
-                total_loss, mse_loss, test_ci, rm2, auc_values, G, P = test(model, device, test_loader, dataset, FLAGS)
-                filename = f"models/deepdtagen_model_{dataset}.pth"
+                total_loss, lm_loss, kl_loss, mse_loss, test_ci, rm2, auc_values, G, P = test(model, device, test_loader, dataset, FLAGS)
+                filename = f"saved_models/deepdtagen_model_{dataset}.pth"
                 if mse_loss < best_mse:
                     best_mse = mse_loss
                     torch.save(model.state_dict(), filename)
                     print('model saved')
 
-                print(f"MSE: {mse_loss.item():.4f}")
+                print(f"MSE: {float(mse_loss):.4f}")
                 print(f"CI: {test_ci:.4f}")
                 print(f"RM2: {rm2:.4f}")
+                print(f"LM: {lm_loss.item():.4f}")
+                print(f"KL: {kl_loss.item():.4f}")
                 print(f"AUCs: {', '.join([f'{auc:.4f}' for auc in auc_values])}")
 
         # Save estimated and true labels
@@ -153,20 +156,24 @@ def experiment(FLAGS, dataset, device):
         logging('Program finished', FLAGS)
 
 if __name__ == "__main__":
-
+    # Dataset names and device setup
     datasets = ['davis', 'kiba', 'bindingdb']
-    dataset_idx = int(sys.argv[1]) if len(sys.argv) > 1 else 2
+    dataset_idx = int(sys.argv[1])
     dataset = datasets[dataset_idx]
+    device = torch.device("cuda:" + str(int(sys.argv[2])) if len(sys.argv) > 2 and torch.cuda.is_available() else "cpu")
 
-    default_device = "cuda:0" if torch.cuda.is_available() else "cpu"
-    device = torch.device("cuda:" + str(int(sys.argv[2])) if len(sys.argv) > 2 and torch.cuda.is_available() else default_device)
-
+    # Flags setup
     FLAGS = lambda: None
     FLAGS.log_dir = 'logs'
-    FLAGS.dataset_name = f'dataset_{dataset}_{int(time.time())}'
+    FLAGS.dataset_name = f'dataset_{dataset}'.format(int(time.time()))
 
-    os.makedirs(FLAGS.log_dir, exist_ok=True)
-    os.makedirs('Affinities', exist_ok=True)
-    os.makedirs('models', exist_ok=True)
+    # Create necessary directories
+    if not os.path.exists(FLAGS.log_dir):
+        os.makedirs(FLAGS.log_dir)
+    if not os.path.exists('Affinities'):
+        os.mkdir('Affinities')
+    if not os.path.exists('saved_models'):
+        os.makedirs('saved_models')
 
+    # Run experiment
     experiment(FLAGS, dataset, device)
