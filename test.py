@@ -20,9 +20,14 @@ def main(dataset_name):
 
     # Threshold values based on the dataset
     if dataset_name == 'kiba':
-        thresholds = [10.0, 10.50, 11.0, 11.50, 12.0, 12.50]
+        thresholds = [10.0, 10.50, 11.0, 11.50, 12.0, 12.1, 12.50]
+        aupr_threshold = 12.1
     elif dataset_name == 'davis':
         thresholds = [5.0, 5.50, 6.0, 6.50, 7.0, 7.50, 8.0, 8.50]
+        aupr_threshold = 7.0
+    elif dataset_name == 'bindingdb':
+        thresholds = [5.0, 5.50, 6.0, 6.50, 7.0, 7.50, 8.0, 8.50]
+        aupr_threshold = 7.0
     else:
         raise ValueError(f"Unknown dataset: {dataset_name}")
 
@@ -61,17 +66,22 @@ def main(dataset_name):
         rms_error = rmse(ground_truth, predicted)
         pearson_corr = pearson(ground_truth, predicted)
         spearman_corr = spearman(ground_truth, predicted)
+        aupr_value = get_aupr(predicted, ground_truth, aupr_threshold)
 
         # Calculate AUC values for each threshold
         auc_values = [
-            get_aupr(predicted, ground_truth, threshold)
+            get_auc((predictions.cpu() > threshold).int(), data.y.view(-1, 1).float().cpu())
             for threshold in thresholds
         ]
 
         # Print the results
-        print(f'MSE: {mse_loss:.4f}, CI: {concordance_index:.4f}, RM2: {rm2_value:.4f}')
-        print(f'RMS Error: {rms_error}')
-        print(f'PPC: {pearson_corr:.4f}, Spearman: {spearman_corr:.4f}')
+        print(f'MSE: {mse_loss:.4f}')
+        print(f'Concordance Index: {concordance_index:.4f}')
+        print(f'Modified R-squared: {rm2_value:.4f}')
+        print(f'RMSE: {rms_error:.4f}')
+        print(f'Pearson: {pearson_corr:.4f}')
+        print(f'Spearman: {spearman_corr:.4f}')
+        print(f'AUPR: {aupr_value:.4f}')
         print(f'AUC Values: {auc_values}')
 
 if __name__ == "__main__":
